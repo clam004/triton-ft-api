@@ -143,3 +143,32 @@ See also "/ft_workspace/FasterTransformer/build/CMakeFiles/CMakeError.log".
 ### 
 
 inside the Docker container interactive session above
+
+```
+git clone https://github.com/NVIDIA/FasterTransformer.git
+
+cd FasterTransformer
+```
+
+The Cmake file is broken, use vim or some other text editor to change CMakeLists.txt, and have line 193 changed from
+
+`set(PYTHON_PATH "python" CACHE STRING "Python path")` to `set(PYTHON_PATH "python3")`
+
+```
+vim CMakeLists.txt
+```
+
+```
+root@e825b309c6f8:/ft_workspace/models# python3
+Python 3.8.10 (default, Jun 22 2022, 20:18:18) 
+[GCC 9.4.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> from transformers import GPT2LMHeadModel
+>>> model = GPT2LMHeadModel.from_pretrained('gpt2')
+Downloading: 100%|██████████████████████████████████████████████████████████████████████| 665/665 [00:00<00:00, 744kB/s]
+Downloading: 100%|███████████████████████████████████████████████████████████████████| 548M/548M [00:06<00:00, 81.3MB/s]
+>>> model.save_pretrained('./gpt2')
+>>> exit()
+root@e825b309c6f8:/ft_workspace/models# ls
+gpt2
+```
