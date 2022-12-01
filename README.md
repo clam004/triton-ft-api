@@ -1,14 +1,26 @@
 # triton-fastertransformer-api
-tutorial on how to deploy a scalable autoregressive causal language model transformer using nvidia triton server 
+
+tutorial on how to deploy a scalable autoregressive causal language model transformer as a fastAPI endpoint using nvidia triton server 
+
+the primary value added is that in addition to simplifying and explaining for the beginner machine learning engineer what is happening in the [NVIDIA blog on triton inference server with faster transformer backend](https://developer.nvidia.com/blog/deploying-gpt-j-and-t5-with-fastertransformer-and-triton-inference-server/) we also do a controlled before and after comparison on a realistic RESTful API
 
 ### Clone fastertransformer_backend repo from GitHub
 
+in your terminal within your desired directory. For example, in the same parent directory for this repo but not inside this repo:
+
+terminal input
 ```
 git clone https://github.com/triton-inference-server/fastertransformer_backend.git
 
 cd fastertransformer_backend
 
 git checkout -b t5_gptj_blog remotes/origin/dev/t5_gptj_blog
+```
+
+expected output
+```
+Branch 't5_gptj_blog' set up to track remote branch 'dev/t5_gptj_blog' from 'origin'.
+Switched to a new branch 't5_gptj_blog'
 ```
 
 ### Build docker image
