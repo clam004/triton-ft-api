@@ -549,3 +549,66 @@ parameters {
 }
 ```
 
+
+```
+parameters {
+  key: "head_num"
+  value: {
+    string_value: "12"
+  }
+}
+parameters {
+  key: "size_per_head"
+  value: {
+    string_value: "64"
+  }
+}
+parameters {
+  key: "inter_size"
+  value: {
+    string_value: "3072"
+  }
+}
+parameters {
+  key: "vocab_size"
+  value: {
+    string_value: "50304"
+  }
+}
+parameters {
+  key: "start_id"
+  value: {
+    string_value: "50256"
+  }
+}
+parameters {
+  key: "end_id"
+  value: {
+    string_value: "50256"
+  }
+}
+parameters {
+  key: "decoder_layers"
+  value: {
+    string_value: "12"
+  }
+}
+parameters {
+  key: "model_name"
+  value: {
+    string_value: "gpt2"
+  }
+}
+parameters {
+  key: "model_type"
+  value: {
+    string_value: "GPT"
+  }
+}
+parameters {
+  key: "model_checkpoint_path"
+  value: {
+    string_value: "/ft_workspace/all_models/gpt/fastertransformer/1/1-gpu/"
+  }
+}
+```
