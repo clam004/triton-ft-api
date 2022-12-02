@@ -6,16 +6,20 @@ the primary value added is that in addition to simplifying and explaining for th
 
 ## All steps below in one quick list
 
+in step 3 you can choose your triton version by for example doing `--build-arg TRITON_VERSION=22.05` instead, you can also change `ft_triton_2207:v1` to whatever name you want for the image
+
 steps 3,4 assume you are within `fastertransformer_backend/` therefore `$(pwd)` refers to this directory which contains
 the Dockerfile inside docker/ 
+
+if you have multiple GPUs, in step 4 and _ you can do `--gpus device=1` instead of `--gpus=all` if you want to place this triton server only on the 2nd GPU instead of idstributed across all GPUs
 
 steps 6 to _ are from within the bash session started in step 4
 
 ```
 1. git clone https://github.com/triton-inference-server/fastertransformer_backend.git
 2. cd fastertransformer_backend
-3. docker build --rm  --build-arg TRITON_VERSION=22.07 -t triton_ft:22.07 -f docker/Dockerfile .
-4. docker run -it --rm --gpus=all --shm-size=4G  -v $(pwd):/ft_workspace triton_ft:22.07 bash
+3. docker build --rm  --build-arg TRITON_VERSION=22.07 -t ft_triton_2207:v1 -f docker/Dockerfile .
+4. docker run -it --rm --gpus=all --shm-size=4G  -v $(pwd):/ft_workspace ft_triton_2207:v1 bash
 6. cd /ft_workspace
 7. git clone https://github.com/NVIDIA/FasterTransformer.git
 8. cd FasterTransformer
