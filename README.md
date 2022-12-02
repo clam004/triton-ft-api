@@ -4,16 +4,18 @@ tutorial on how to deploy a scalable autoregressive causal language model transf
 
 the primary value added is that in addition to simplifying and explaining for the beginner machine learning engineer what is happening in the [NVIDIA blog on triton inference server with faster transformer backend](https://developer.nvidia.com/blog/deploying-gpt-j-and-t5-with-fastertransformer-and-triton-inference-server/) we also do a controlled before and after comparison on a realistic RESTful API that you can put into production
 
-## All steps below in one list
+## All steps below in one quick list
+
+steps 3,4 assume you are within `fastertransformer_backend/` therefore `$(pwd)` refers to this directory which contains
+the Dockerfile inside docker/ 
+
+steps 6 to _ are from within the bash session started in step 4
 
 ```
 1. git clone https://github.com/triton-inference-server/fastertransformer_backend.git
 2. cd fastertransformer_backend
-3. docker build --rm  --build-arg TRITON_VERSION=22.07 -t triton_with_ft:22.07 -f docker/Dockerfile .
-4. docker run -it --rm --gpus=all --shm-size=4G  -v $(pwd):/ft_workspace -p 8000:8000 -p 8001:8001 -p 8002:8002 triton_with_ft:22.07 bash
-
-steps 6 to  are from within the bash session started in step 4
-
+3. docker build --rm  --build-arg TRITON_VERSION=22.07 -t triton_ft:22.07 -f docker/Dockerfile .
+4. docker run -it --rm --gpus=all --shm-size=4G  -v $(pwd):/ft_workspace triton_ft:22.07 bash
 6. cd /ft_workspace
 7. git clone https://github.com/NVIDIA/FasterTransformer.git
 8. cd FasterTransformer
@@ -258,6 +260,7 @@ python3 ./FasterTransformer/examples/pytorch/gpt/utils/huggingface_gpt_convert.p
 
 -i_g 1 flag is used to indicate number of gpus you are using for inference. I'm using 1. if your gpu supports it, use -weight_data_type fp16 as the accuracy loss is minimal and the speedup is significant
 
+Below is a common error to see, it resolves if you simply run the convert.py step again
 ```
 root@e825b309c6f8:/ft_workspace/all_models/gpt/fastertransformer/1# cd /ft_workspace
 root@e825b309c6f8:/ft_workspace# python3 ./FasterTransformer/examples/pytorch/gpt/utils/huggingface_gpt_convert.py -o ./all_models/gpt/fastertransformer/1/ -i ./models/gpt2 -i_g 1
@@ -285,9 +288,10 @@ Traceback (most recent call last):
     raise RuntimeError('context has already been set')
 RuntimeError: context has already been set
 ```
-
+For the next step you need to know your models transformer architecture sizes, look here to find them
 `/ft_workspace/all_models/gpt/fastertransformer/3/2-gpu# vim config.ini `
 
+you will see something liek this
 ```
 [gpt]
 model_name = ./models/gpt2
@@ -304,7 +308,20 @@ weight_data_type = fp32
 
 inter_size = Intermediate size of the feed forward network. It is often set to 4 * head_num * size_per_head
 
-`/ft_workspace/all_models/gpt/fastertransformer/config.pbtxt`
+in the example below, the inputs `8 1 32 12 64 3072 50257 1 1` correspond to:
+
+`batch_size beam_width max_input_len head_number size_per_head inter_size vocab_size data_type tensor_para_size`
+
+modify these according to your transformer's sizes and then enter your version of the below command
+
+```
+cd /ft_workspace
+CUDA_VISIBLE_DEVICES=0 ./FasterTransformer/build/bin/gpt_gemm 8 1 32 12 64 3072 50257 1 1
+```
+
+if this is successful, a file called `gemm_config.in` will appear in the `fastertransformer_backend/` folder
+
+next, modify `/ft_workspace/all_models/gpt/fastertransformer/config.pbtxt` to your models architecture
 
 example of config.pbtxt for gpt2-medium
 ```
@@ -549,7 +566,7 @@ parameters {
 }
 ```
 
-
+example of config.pbtxt for gpt2
 ```
 parameters {
   key: "head_num"
@@ -611,4 +628,38 @@ parameters {
     string_value: "/ft_workspace/all_models/gpt/fastertransformer/1/1-gpu/"
   }
 }
+```
+
+the keysn you must custiomize are:
+
+`model_checkpoint_path decoder_layers head_num size_per_head inter_size vocab_size start_id end_id`
+
+start_id and end_id should be 50256
+
+```
+cd /ft_workspace
+CUDA_VISIBLE_DEVICES=0 /opt/tritonserver/bin/tritonserver --log-warning false --model-repository=./all_models/gpt/
+```
+
+the endpoint for the model should be available at `<IP_ADDRESS>:8001` or wherever you routed the HTTP or gRPC port to in `-p` above
+
+to use your model you will need to `pip install tritonclient[all]` in whatever python environment you are using
+
+```python
+import tritonclient.grpc as grpcclient
+from tritonclient.utils import np_to_triton_dtype
+
+def prepare_tensor(name, input):
+
+  tensor = grpcclient.InferInput(
+    name, 
+    input.shape, 
+    np_to_triton_dtype(input.dtype)
+  )
+
+  tensor.set_data_from_numpy(input)
+  
+  return tensor
+
+
 ```
