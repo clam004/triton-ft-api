@@ -3,6 +3,9 @@
 **/modelstates/
 **/modelstate/
 
+# Dont push your clone of fastertransformer_backend
+**/fastertransformer_backend/
+
 # Environment Variables and Virtual Environments
 **/*venv*
 **/.env
