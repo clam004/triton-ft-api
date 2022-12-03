@@ -1,0 +1,4 @@
+tritonclient[all]
+jupyterlab
+ipywidgets
+numpy
