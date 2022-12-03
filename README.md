@@ -24,7 +24,7 @@ if you have multiple GPUs, in step 4 and _ you can do `--gpus device=1` instead 
 port 8000 is used to send http requests to triton. 8001 is used for GRPC requests, which are apparently faster than http requests. 8002 is used for monitering. I use 8001. to route gRPC to port 2001 on your VM do `-p 2001:8001` you may need to do this just to reroute to an available port.
 
 ```
-3. sudo docker build --rm -t triton_ft:v1 -f docker/Dockerfile .
+3. sudo docker build --rm --no-cache --build-arg TRITON_VERSION=22.07 -t triton_with_ft:22.07 -f docker/Dockerfile .
 4. sudo docker run -it --rm --gpus=all --shm-size=4G  -v /path/to/fastertransformer_backend:/ft_workspace -p 8001:8001 -p 8002:8002 triton_ft:v1 bash
 ```
 
