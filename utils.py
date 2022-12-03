@@ -15,21 +15,21 @@ def prepare_tensor(name, input):
   return tensor
 
 def generate_text(
-    prompt,
-    ENDPOINT_URL,
-    max_gen_len = 32,
-    top_k = 100, 
-    top_p = 0.99, 
-    num_return_sequences = 1,
-    temperature = 0.9,
-    repetition_penalty = 1.0,
-    mystop = [
-        '<',
-        '[human]',
-        '\n',
-        '[',
-    ],
-    verbose = False,
+  prompt,
+  ENDPOINT_URL,
+  max_gen_len = 32,
+  top_k = 50, 
+  top_p = 0.6, 
+  num_return_sequences = 1,
+  temperature = 0.6,
+  repetition_penalty = 1.0,
+  mystop = [
+    '<',
+    '[human]',
+    '\n',
+    '[',
+  ],
+  verbose = False,
 ):
 
   MODEl_GPT = "ensemble" 
@@ -58,6 +58,7 @@ def generate_text(
   len_penalty = 1.0 * np.ones([input0_data.shape[0], 1]).astype(np.float32)
   rep_penalty = REPETITION_PENALTY * np.ones([input0_data.shape[0], 1]).astype(np.float32)
   random_seed = (100 * np.random.rand(input0_data.shape[0], 1)).astype(np.uint64)
+  #random_seed = (100 * np.random.rand(input0_data.shape[0], 1)).astype(np.int32) 
   is_return_log_probs = True * np.ones([input0_data.shape[0], 1]).astype(bool)
   beam_width = (BEAM_WIDTH * np.ones([input0_data.shape[0], 1])).astype(np.uint32)
   start_ids = start_id * np.ones([input0_data.shape[0], 1]).astype(np.uint32)
@@ -88,4 +89,5 @@ def generate_text(
 
   return outputs
 
-print(generate_text('the first rule of robotics is','20.112.126.140:1337'))
+#print(generate_text('the first rule of robotics is','20.112.126.140:1337'))
+print(generate_text('the first rule of robotics is','20.112.126.140:2001'))
