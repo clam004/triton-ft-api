@@ -28,6 +28,11 @@ port 8000 is used to send http requests to triton. 8001 is used for GRPC request
 4. sudo docker run -it --rm --gpus=all --shm-size=4G  -v /path/to/fastertransformer_backend:/ft_workspace -p 8001:8001 -p 8002:8002 triton_ft:v1 bash
 ```
 
+example
+```
+sudo docker run -it --rm --gpus device=1 --shm-size=4G  -v /home/carson/fastertransformer_backend:/ft_workspace -p 2001:8001 -p 2002:8002 triton_ft:v1 bash
+```
+
 the next steps are from within the bash session started in step 4
 
 ```
@@ -62,7 +67,231 @@ you may have to run the next step again if the first attempt fails, in the examp
 24. vim config.pbtxt
 ```
 
-using the information in `/ft_workspace/all_models/gpt/fastertransformer/1/1-gpu/config.ini`, update config.pbtxt 
+using the information in `/ft_workspace/all_models/gpt/fastertransformer/1/1-gpu/config.ini`, update config.pbtxt, for example
+
+```
+name: "fastertransformer"
+backend: "fastertransformer"
+default_model_filename: "gpt2-med"
+max_batch_size: 1024
+
+model_transaction_policy {
+  decoupled: False
+}
+
+input [
+  {
+    name: "input_ids"
+    data_type: TYPE_UINT32
+    dims: [ -1 ]
+  },
+  {
+    name: "input_lengths"
+    data_type: TYPE_UINT32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+  },
+  {
+    name: "request_output_len"
+    data_type: TYPE_UINT32
+    dims: [ -1 ]
+  },
+  {
+    name: "runtime_top_k"
+    data_type: TYPE_UINT32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "runtime_top_p"
+    data_type: TYPE_FP32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "beam_search_diversity_rate"
+    data_type: TYPE_FP32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "temperature"
+    data_type: TYPE_FP32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "len_penalty"
+    data_type: TYPE_FP32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "repetition_penalty"
+    data_type: TYPE_FP32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "random_seed"
+    data_type: TYPE_UINT64
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "is_return_log_probs"
+    data_type: TYPE_BOOL
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "beam_width"
+    data_type: TYPE_UINT32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "start_id"
+    data_type: TYPE_UINT32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "end_id"
+    data_type: TYPE_UINT32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "stop_words_list"
+    data_type: TYPE_INT32
+    dims: [ 2, -1 ]
+    optional: true
+  },
+  {
+    name: "bad_words_list"
+    data_type: TYPE_INT32
+    dims: [ 2, -1 ]
+    optional: true
+  },
+  {
+    name: "prompt_learning_task_name_ids"
+    data_type: TYPE_UINT32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "request_prompt_embedding"
+    data_type: TYPE_FP16
+    dims: [ -1, -1 ]
+    optional: true
+  },
+  {
+    name: "request_prompt_lengths"
+    data_type: TYPE_UINT32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  },
+  {
+    name: "request_prompt_type"
+    data_type: TYPE_UINT32
+    dims: [ 1 ]
+    reshape: { shape: [ ] }
+    optional: true
+  }
+]
+output [
+  {
+    name: "output_ids"
+    data_type: TYPE_UINT32
+    dims: [ -1, -1 ]
+  },
+  {
+    name: "sequence_length"
+    data_type: TYPE_UINT32
+    dims: [ -1 ]
+  },
+  {
+    name: "cum_log_probs"
+    data_type: TYPE_FP32
+    dims: [ -1 ]
+  },
+  {
+    name: "output_log_probs"
+    data_type: TYPE_FP32
+    dims: [ -1, -1 ]
+  }
+]
+instance_group [
+  {
+    count: 2
+    kind : KIND_CPU
+  }
+]
+parameters {
+  key: "tensor_para_size"
+  value: {
+    string_value: "1"
+  }
+}
+parameters {
+  key: "pipeline_para_size"
+  value: {
+    string_value: "1"
+  }
+}
+parameters {
+  key: "data_type"
+  value: {
+    string_value: "fp16"
+  }
+}
+parameters {
+  key: "model_type"
+  value: {
+    string_value: "GPT"
+  }
+}
+parameters {
+  key: "model_checkpoint_path"
+  value: {
+    string_value: "/ft_workspace/all_models/gpt/fastertransformer/1/1-gpu/"
+  }
+}
+parameters {
+  key: "int8_mode"
+  value: {
+    string_value: "0"
+  }
+}
+parameters {
+  key: "enable_custom_all_reduce"
+  value: {
+    string_value: "0"
+  }
+}
+```
+
+Run the triton server
+
+```
+24. CUDA_VISIBLE_DEVICES=0 /opt/tritonserver/bin/tritonserver --log-warning false --model-repository=./all_models/gpt/
+```
+
+you can do the same as above outside the environment by exiting the bash session
 
 ```
 exit
@@ -71,7 +300,13 @@ exit
 you are no longer in the bash session. you could replace `$(pwd)` with the full path `/path/to/fastertransformer_backend/`, or within `/path/to/fastertransformer_backend/` run:
 
 ```
-24. sudo docker run -it --rm --gpus device=1 --shm-size=4G  -v $(pwd):/ft_workspace -p 2001:8001 -p 2002:8002 triton_ft:v1 /opt/tritonserver/bin/tritonserver --log-warning false --model-repository=/ft_workspace/all_models/gpt/
+24. sudo docker run -it --rm --gpus-all --shm-size=4G  -v $(pwd):/ft_workspace -p 2001:8001 -p 2002:8002 triton_ft:v1 /opt/tritonserver/bin/tritonserver --log-warning false --model-repository=/ft_workspace/all_models/gpt/
+```
+
+for example
+
+```
+24. sudo docker run -it --rm --gpus device=1 --shm-size=4G  -v /home/carson/fastertransformer_backend:/ft_workspace -p 2001:8001 -p 2002:8002 triton_ft:v1 /opt/tritonserver/bin/tritonserver --log-warning false --model-repository=/ft_workspace/all_models/gpt/
 ```
 
 keep this terminal open, do not exit this terminal window, a successful deployment would result in output: 
@@ -109,10 +344,22 @@ services:
             capabilities: [gpu]
 ```
 
-
 ```
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
+```
+
+```
+Traceback (most recent call last):
+  File "utils.py", line 90, in <module>
+    print(generate_text('the first rule of robotics is','20.112.126.140:2001'))
+  File "utils.py", line 84, in generate_text
+    result = client.infer(MODEl_GPT, inputs)
+  File "/home/carson/triton-ft-api/.venv/lib/python3.8/site-packages/tritonclient/grpc/__init__.py", line 1431, in infer
+    raise_error_grpc(rpc_error)
+  File "/home/carson/triton-ft-api/.venv/lib/python3.8/site-packages/tritonclient/grpc/__init__.py", line 62, in raise_error_grpc
+    raise get_error_grpc(rpc_error) from None
+tritonclient.utils.InferenceServerException: [StatusCode.INVALID_ARGUMENT] inference input data-type is 'UINT64', model expects 'INT32' for 'ensemble'
 ```
