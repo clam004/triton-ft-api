@@ -19,16 +19,13 @@ in docker build you can choose your triton version by for example doing `--build
 
 in docker build to build the image from scratch when you already have nother similar image, use `--no-cache` 
 
-docker run assumes you are within `fastertransformer_backend/` therefore `$(pwd)` refers to this directory which contains
-the Dockerfile inside docker/ 
-
 if you have multiple GPUs, in step 4 and _ you can do `--gpus device=1` instead of `--gpus=all` if you want to place this triton server only on the 2nd GPU instead of distributed across all GPUs
 
-Port 8000 is used to send http requests to triton. 8001 is used for GRPC requests, which are apparently faster than http requests. 8002 is used for monitering. I use 8001. to route gRPC to port 2001 on your VM do `-p 2001:8001`
+port 8000 is used to send http requests to triton. 8001 is used for GRPC requests, which are apparently faster than http requests. 8002 is used for monitering. I use 8001. to route gRPC to port 2001 on your VM do `-p 2001:8001` you may need to do this just to reroute to an available port.
 
 ```
 3. sudo docker build --rm -t triton_ft:v1 -f docker/Dockerfile .
-4. sudo docker run -it --rm --gpus=all --shm-size=4G  -v $(pwd):/ft_workspace -p 8001:8001 -p 8002:8002 triton_ft:v1 bash
+4. sudo docker run -it --rm --gpus=all --shm-size=4G  -v /path/to/fastertransformer_backend:/ft_workspace -p 8001:8001 -p 8002:8002 triton_ft:v1 bash
 ```
 
 the next steps are from within the bash session started in step 4
@@ -39,7 +36,7 @@ the next steps are from within the bash session started in step 4
 8. cd FasterTransformer
 ```
 
-vim CMakeLists.txt and have line 193 changed from `set(PYTHON_PATH "python" CACHE STRING "Python path")` to `set(PYTHON_PATH "python3")`
+vim CMakeLists.txt and change `set(PYTHON_PATH "python" CACHE STRING "Python path")` to `set(PYTHON_PATH "python3")`
 
 ```
 9. mkdir -p build
@@ -51,65 +48,64 @@ vim CMakeLists.txt and have line 193 changed from `set(PYTHON_PATH "python" CACH
 15. cd models
 16. python3
 17. from transformers import GPT2LMHeadModel
-18. model = GPTLMHeadModel.from_pretrained('gpt2')
+18. model = GPT2LMHeadModel.from_pretrained('gpt2')
 19. model.save_pretrained('./gpt2')
 20. exit()
+```
+
+you may have to run the next step again if the first attempt fails, in the example below we create a folder of binaries for each layer in `/ft_workspace/all_models/gpt/fastertransformer/1/1-gpu`
+
+```
 21. cd /ft_workspace
 22. python3 ./FasterTransformer/examples/pytorch/gpt/utils/huggingface_gpt_convert.py -o ./all_models/gpt/fastertransformer/1/ -i ./models/gpt2 -i_g 1
-<<<<<<< HEAD
+23. exit
 ```
 
-For the next step you need to know your models transformer architecture sizes, use the below command to look them up
-`/ft_workspace/all_models/gpt/fastertransformer/1/1-gpu# vim config.ini `
-
-you will see something like this
-```
-[gpt]
-model_name = ./models/gpt2
-head_num = 12
-size_per_head = 64
-inter_size = 3072
-max_pos_seq_len = 1024
-num_layer = 12
-vocab_size = 50257
-start_id = 50256
-end_id = 50256
-weight_data_type = fp32
-```
-
-=======
-```
-
-For the next step you need to know your models transformer architecture sizes, use the below command to look them up
-`/ft_workspace/all_models/gpt/fastertransformer/1/1-gpu# vim config.ini `
-
-you will see something like this
-```
-[gpt]
-model_name = ./models/gpt2
-head_num = 12
-size_per_head = 64
-inter_size = 3072
-max_pos_seq_len = 1024
-num_layer = 12
-vocab_size = 50257
-start_id = 50256
-end_id = 50256
-weight_data_type = fp32
-```
-
->>>>>>> fa01fc7674f2595850438b5032f27252471fbf44
-inter_size = Intermediate size of the feed forward network. It is often set to 4 * head_num * size_per_head
-
-in the example below, the inputs `8 1 32 12 64 3072 50257 1 1` correspond to:
-
-`batch_size beam_width max_input_len head_number size_per_head inter_size vocab_size data_type tensor_para_size`
-
-modify these according to your transformer's sizes and then enter your version of the below command
+you are no longer in the bash session. you could replace `$(pwd)` with the full path `/path/to/fastertransformer_backend/`, or within `/path/to/fastertransformer_backend/` run:
 
 ```
-23. sudo docker run -it --rm --gpus device=1 --shm-size=4G  -v $(pwd):/ft_workspace -p 8989:8000 triton_ft:v1 /opt/tritonserver/bin/tritonserver --log-warning false --model-repository=/ft_workspace/all_models/gpt/
+24. sudo docker run -it --rm --gpus device=1 --shm-size=4G  -v $(pwd):/ft_workspace -p 2001:8001 -p 2002:8002 triton_ft:v1 /opt/tritonserver/bin/tritonserver --log-warning false --model-repository=/ft_workspace/all_models/gpt/
 ```
+
+a successful deployment would result in output: 
+
+```
+I1203 05:18:03.283727 1 grpc_server.cc:4195] Started GRPCInferenceService at 0.0.0.0:8001
+I1203 05:18:03.283981 1 http_server.cc:2857] Started HTTPService at 0.0.0.0:8000
+I1203 05:18:03.326952 1 http_server.cc:167] Started Metrics Service at 0.0.0.0:8002
+```
+
+in another terminal, if you check your `nvidia-smi` you will see the model has been loaded to your GPU or GPUs. if you exit from the above, the models will be off loaded. This step is meant to remain as so while the trion server is running. using docker compose you can keep this running as long as the VM is on using `restart: "unless-stopped"`
+
+the docker compose equivalent of step 24 is:
+
+```
+version: "2.3"
+services:
+
+  fastertransformer:
+    restart: "unless-stopped"
+    image: triton_with_ft:22.07
+    runtime: nvidia
+    ports:
+      - 2001:8001
+    shm_size: 4gb
+    volumes:
+      - ${HOST_FT_MODEL_REPO}:/ft_workspace
+    command: /opt/tritonserver/bin/tritonserver --log-warning false --model-repository=/ft_workspace/all_models/gpt/
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0']
+            capabilities: [gpu]
+```
+
+
+
+
+
 
 ## Detailed explaination of steps
 
