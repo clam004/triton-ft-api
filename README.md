@@ -369,3 +369,14 @@ tritonclient.utils.InferenceServerException: [StatusCode.INVALID_ARGUMENT] infer
 ```
 print(generate_text('the first rule of robotics is','20.112.126.140:1337'))
 ```
+
+```
+tritonclient.utils.InferenceServerException: [StatusCode.INVALID_ARGUMENT] [request id: <id_unknown>] inference input data-type is 'INT32', model expects 'UINT64' for 'ensemble'
+```
+
+the above error refers to the type of these lines
+
+```
+random_seed = (100 * np.random.rand(input0_data.shape[0], 1)).astype(np.uint64)
+#random_seed = (100 * np.random.rand(input0_data.shape[0], 1)).astype(np.int32) 
+```
