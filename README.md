@@ -4,7 +4,9 @@ tutorial on how to deploy a scalable autoregressive causal language model transf
 
 the primary value added is that in addition to simplifying and explaining for the beginner machine learning engineer what is happening in the [NVIDIA blog on triton inference server with faster transformer backend](https://developer.nvidia.com/blog/deploying-gpt-j-and-t5-with-fastertransformer-and-triton-inference-server/) we also do a controlled before and after comparison on a realistic RESTful API that you can put into production
 
-## All steps below in one quick list
+## Step By Step Instructions
+
+enter into your terminal within your desired directory:
 
 ```
 1. git clone https://github.com/triton-inference-server/fastertransformer_backend.git
@@ -13,16 +15,20 @@ the primary value added is that in addition to simplifying and explaining for th
 
 you may not need to use sudo
 
-in step 3 you can choose your triton version by for example doing `--build-arg TRITON_VERSION=22.05` instead, you can also change `ft_triton_2207:v1` to whatever name you want for the image
+in docker build you can choose your triton version by for example doing `--build-arg TRITON_VERSION=22.05` instead, you can also change `ft_triton_2207:v1` to whatever name you want for the image
 
-steps 3, 4 assume you are within `fastertransformer_backend/` therefore `$(pwd)` refers to this directory which contains
+in docker build to build the image from scratch when you already have nother similar image, use `--no-cache` 
+
+docker run assumes you are within `fastertransformer_backend/` therefore `$(pwd)` refers to this directory which contains
 the Dockerfile inside docker/ 
 
-if you have multiple GPUs, in step 4 and _ you can do `--gpus device=1` instead of `--gpus=all` if you want to place this triton server only on the 2nd GPU instead of idstributed across all GPUs
+if you have multiple GPUs, in step 4 and _ you can do `--gpus device=1` instead of `--gpus=all` if you want to place this triton server only on the 2nd GPU instead of distributed across all GPUs
+
+Port 8000 is used to send http requests to triton. 8001 is used for GRPC requests, which are apparently faster than http requests. 8002 is used for monitering. I use 8001. to route gRPC to port 2001 on your VM do `-p 2001:8001`
 
 ```
-3. sudo docker build --rm --build-arg TRITON_VERSION=22.07 -t triton_ft:v1 -f docker/Dockerfile .
-4. sudo docker run -it --rm --gpus=all --shm-size=4G  -v $(pwd):/ft_workspace -p 8001:8001 -p 8002:8002 triton_with_ft:22.07 bash
+3. sudo docker build --rm -t triton_ft:v1 -f docker/Dockerfile .
+4. sudo docker run -it --rm --gpus=all --shm-size=4G  -v $(pwd):/ft_workspace -p 8001:8001 -p 8002:8002 triton_ft:v1 bash
 ```
 
 the next steps are from within the bash session started in step 4
@@ -33,16 +39,53 @@ the next steps are from within the bash session started in step 4
 8. cd FasterTransformer
 ```
 
-vim CMakeLists.txt and and have line 193 changed from `set(PYTHON_PATH "python" CACHE STRING "Python path")` to `set(PYTHON_PATH "python3")`
+vim CMakeLists.txt and have line 193 changed from `set(PYTHON_PATH "python" CACHE STRING "Python path")` to `set(PYTHON_PATH "python3")`
 
 ```
 9. mkdir -p build
 10. cd build
 11. cmake -DSM=xx -DCMAKE_BUILD_TYPE=Release -DBUILD_PYT=ON -DBUILD_MULTI_GPU=ON ..
-12. cd build
+12. make -j32
+13. cd /ft_workspace
+14. mkdir models
+15. cd models
+16. python3
+17. from transformers import GPT2LMHeadModel
+18. model = GPTLMHeadModel.from_pretrained('gpt2')
+19. model.save_pretrained('./gpt2')
+20. exit()
+21. cd /ft_workspace
+22. python3 ./FasterTransformer/examples/pytorch/gpt/utils/huggingface_gpt_convert.py -o ./all_models/gpt/fastertransformer/1/ -i ./models/gpt2 -i_g 1
 ```
 
+For the next step you need to know your models transformer architecture sizes, use the below command to look them up
+`/ft_workspace/all_models/gpt/fastertransformer/1/1-gpu# vim config.ini `
+
+you will see something like this
 ```
+[gpt]
+model_name = ./models/gpt2
+head_num = 12
+size_per_head = 64
+inter_size = 3072
+max_pos_seq_len = 1024
+num_layer = 12
+vocab_size = 50257
+start_id = 50256
+end_id = 50256
+weight_data_type = fp32
+```
+
+inter_size = Intermediate size of the feed forward network. It is often set to 4 * head_num * size_per_head
+
+in the example below, the inputs `8 1 32 12 64 3072 50257 1 1` correspond to:
+
+`batch_size beam_width max_input_len head_number size_per_head inter_size vocab_size data_type tensor_para_size`
+
+modify these according to your transformer's sizes and then enter your version of the below command
+
+```
+23. sudo docker run -it --rm --gpus device=1 --shm-size=4G  -v $(pwd):/ft_workspace -p 8989:8000 triton_ft:v1 /opt/tritonserver/bin/tritonserver --log-warning false --model-repository=/ft_workspace/all_models/gpt/
 ```
 
 ## Detailed explaination of steps
