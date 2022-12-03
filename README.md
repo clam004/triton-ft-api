@@ -363,3 +363,9 @@ Traceback (most recent call last):
     raise get_error_grpc(rpc_error) from None
 tritonclient.utils.InferenceServerException: [StatusCode.INVALID_ARGUMENT] inference input data-type is 'UINT64', model expects 'INT32' for 'ensemble'
 ```
+
+20.112.126.140:1337 in this example is the gRPC port 
+
+```
+print(generate_text('the first rule of robotics is','20.112.126.140:1337'))
+```

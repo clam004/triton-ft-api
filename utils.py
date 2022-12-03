@@ -46,9 +46,10 @@ def generate_text(
 
   input0 = [[prompt] for _ in range(num_return_sequences)]
 
+  input0_data = np.array(input0).astype(object)
+
   bad_words_list = np.array([[""] for _ in range(num_return_sequences)], dtype=object)
   stop_words_list = np.array([mystop for _ in range(num_return_sequences)], dtype=object)
-  input0_data = np.array(input0).astype(object)
   output0_len = np.ones_like(input0).astype(np.uint32) * OUTPUT_LEN
   runtime_top_k = (TOP_K * np.ones([input0_data.shape[0], 1])).astype(np.uint32)
   runtime_top_p = TOP_P * np.ones([input0_data.shape[0], 1]).astype(np.float32)
@@ -87,4 +88,4 @@ def generate_text(
 
   return outputs
 
-print(generate_text('the first rule of robotics is','20.112.126.140:2001'))
+print(generate_text('the first rule of robotics is','20.112.126.140:1337'))
